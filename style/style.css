@@ -1,0 +1,55 @@
+body{
+    background-color: azure;
+}
+
+.controls{
+    padding: 2% 0%;
+    /* text-align: center; */
+    border: dashed grey 0.5px;
+    /* border-style:groove */
+}
+
+h3{
+    text-align: center;
+    padding: 10% 0%;
+}
+
+.first{
+    padding: 5% 0%;
+    text-align: center;
+}
+
+.second{
+    padding-bottom: 5%;
+    text-align: center;
+}
+
+.control-label{
+    padding: 5% 0%;
+    font-weight: 700;
+}   
+
+/* .status-output{
+    letter-spacing: 5px;   
+} */
+
+.mdl_btn{
+    margin-left: 5%;
+}
+
+.status-label{
+    margin-left: 20%;
+    font-weight: 600;
+}
+
+#myCanvas{
+    border: 1px solid;
+    border-color: red;
+    /* margin: 5% 0%; */
+    width: 700px;
+    height: 500px;
+}
+
+#main{
+    padding: 0% 2%;
+}

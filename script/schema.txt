@@ -1,0 +1,18 @@
+1. Random data generation
+
+    a. Type of random data
+    b. Equation of type
+    c. fit random x values and some noise to get y values
+
+        createRegression(no_of_points,noise)
+            randx = createRandomX(no_of_points)
+            randy = calculate(randx)
+            return [randx,randy]
+        
+        Propertis for createRegression
+            Noise 
+            No. of points
+
+    Model Type Selection  ->  Data Properties  ->  Training Properties  ->  Graph Updates and Graph
+
+    
