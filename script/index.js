@@ -1,4 +1,5 @@
 let canvas = document.getElementById("myCanvas");
+let paramCanvas = document.getElementById("paramChart");
 let global_selected_method = "regression";
 let global_data = undefined;
 let global_continue_flag= true;
@@ -22,6 +23,20 @@ let chart = new Chart(canvas,{
     }
 })
 
+let paramChart = new Chart(paramCanvas,{
+    type : "line",
+    options : {
+        scales : {
+            x : {
+                beginAtZero : true
+            },
+            y : {
+                beginAtZero : true
+            }
+        }
+    }
+})
+
 selectModel(document.getElementsByClassName("regression")[0]);
 updateLabel(undefined);
 
@@ -29,6 +44,14 @@ updateLabel(undefined);
 
 function round(number,place){
     return Math.round(number*(10**place)) / (10**place);
+}
+
+function range(limit){
+    let out = [];
+    for(let i=0;i<limit;i++){
+        out.push(i);
+    }
+    return out;
 }
 
 function createRandomX(no_points){
@@ -154,12 +177,14 @@ function updatePredictionLine(weights){
     });
     if(chart.data.datasets.length==1){
         chart.data.datasets.push({
+            label : "Prediction line",
             data : gen,
             backgroundColor : "red",
             type : "line"     
         });
     }else{
         chart.data.datasets[1] = {
+            label : "Prediction line",
             data : gen,
             backgroundColor : "red",
             type : "line"
@@ -201,9 +226,10 @@ function runModel(modelProps){
         }
         document.getElementsByClassName("status-output")[0].innerText = `Epoch : ${i+1} Loss : ${average(epoch_lss)} Weights  : ${weights["m"]},${weights["c"]}`;
         all_loss.push(average(epoch_lss));
-        // await sleep(200);
+        // updateParamChart(all_loss);
         updatePredictionLine(weights);
     }
+    updateParamChart(all_loss);
 }
 
 // Events and clicks
@@ -231,12 +257,43 @@ function load_chart(options){
         labels : data[0],
         datasets : [
             {
+                label : "Regression Points",
                 data : data[1],
                 backgroundColor : "green"
             }
         ],
     }
     chart.update();
+}
+
+function updateParamChart(newParams){
+    console.log(newParams);
+    paramChart.data = {
+        labels : range(newParams.length),
+        datasets : [
+            {
+                // type : "line",
+                label : "Loss",
+                data : newParams,
+                backgroundColor : "red",
+                borderColor : "red"
+            }
+        ]
+    }
+    // if(paramChart.data.datasets.length==0){
+    //     paramChart.data.datasets.push({
+    //         data : newParams,
+    //         backgroundColor : "cyan",
+    //         label : "Loss"
+    //     });
+    // }else{
+    //     paramChart.data.dataset[0] = {
+    //         data : newParams,
+    //         backgroundColor : "cyan",
+    //         label : "Loss"
+    //     }
+    // }
+    paramChart.update();
 }
 
 
