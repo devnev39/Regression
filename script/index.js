@@ -1,10 +1,9 @@
 let canvas = document.getElementById("myCanvas");
 let paramCanvas = document.getElementById("paramChart");
-let global_selected_method = "regression";
-let global_data = undefined;
-let global_continue_flag= true;
-let global_rounding_factor = 3;
-let model_gen_data = undefined;
+let global_selected_method = "regression";  // Globally selected method
+let global_data = undefined;    // Globally generated data
+let global_continue_flag= true; // Stop button flag
+let global_rounding_factor = 3; // Global rounding factor for all calculations
 
 // Test variables
 let obj = undefined;
@@ -37,6 +36,8 @@ let paramChart = new Chart(paramCanvas,{
     }
 })
 
+
+// Select defaults for loading site
 selectModel(document.getElementsByClassName("regression")[0]);
 updateLabel(undefined);
 
@@ -82,10 +83,6 @@ function createRegression(no_points,noise){
     });
     global_data = [randx,randy];
     return [randx,randy];
-}
-
-function sleep(ms){
-    return new Promise(resolve => setTimeout(resolve,ms));
 }
 
 function getModelProperties(){
@@ -280,19 +277,6 @@ function updateParamChart(newParams){
             }
         ]
     }
-    // if(paramChart.data.datasets.length==0){
-    //     paramChart.data.datasets.push({
-    //         data : newParams,
-    //         backgroundColor : "cyan",
-    //         label : "Loss"
-    //     });
-    // }else{
-    //     paramChart.data.dataset[0] = {
-    //         data : newParams,
-    //         backgroundColor : "cyan",
-    //         label : "Loss"
-    //     }
-    // }
     paramChart.update();
 }
 
@@ -340,8 +324,6 @@ function udpateChart(object){
             no_points = +x.value;
         }
     });
-    // console.log(noise);
-    // console.log(no_points);
     if(noise && no_points){
         load_chart({
             no_points : no_points,
