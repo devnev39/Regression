@@ -292,6 +292,7 @@ function selectModel(object){
             x.className = "btn btn-secondary "+x.classList[2]+" mdl_btn";
         }
     })
+    document.getElementsByClassName("status-output")[0].innerText = "";
     udpateChart();
 }
 
