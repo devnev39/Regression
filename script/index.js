@@ -190,6 +190,19 @@ function updatePredictionLine(weights){
     chart.update();
 }
 
+function shuffle(x_arr,y_arr){
+    for (let i = x_arr.length-1; i >= 0; i--) {
+        let rand = Math.round(Math.random()*(x_arr.length-1));
+        let c1 = x_arr[i];
+        let c2 = y_arr[i];
+
+        x_arr[i] = x_arr[rand];
+        y_arr[i] = y_arr[rand];
+        x_arr[rand] = c1;
+        y_arr[rand] = c2;
+    }
+}
+
 function runModel(modelProps){
     if(!modelProps){
         alert("Model properties not aquired !");
@@ -210,6 +223,10 @@ function runModel(modelProps){
     all_loss = [];
     for(let i=0;i<modelProps["epochs"];i++){
         epoch_lss = [];
+        shuffle(x_batchwise,y_batchwise);
+        x_batchwise.forEach(x_batch=>{
+            shuffle(x_batch,y_batchwise.at(x_batchwise.indexOf(x_batch)));
+        });
         if(global_continue_flag){
             for(let j=0;j<x_batchwise.length;j++){
                 y_pred = evaluate(x_batchwise[j],weights);
@@ -225,6 +242,7 @@ function runModel(modelProps){
         all_loss.push(average(epoch_lss));
         // updateParamChart(all_loss);
         updatePredictionLine(weights);
+        console.log(`Epoch : ${i}   Loss : ${average(epoch_lss)}`);
     }
     updateParamChart(all_loss);
 }
@@ -264,7 +282,7 @@ function load_chart(options){
 }
 
 function updateParamChart(newParams){
-    console.log(newParams);
+    // console.log(newParams);
     paramChart.data = {
         labels : range(newParams.length),
         datasets : [
