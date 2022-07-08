@@ -11,7 +11,7 @@ body{
 
 h3{
     text-align: center;
-    padding: 10% 0%;
+    /* padding: 5% 0%; */
 }
 
 .first{
@@ -29,17 +29,19 @@ h3{
     font-weight: 700;
 }   
 
-/* .status-output{
-    letter-spacing: 5px;   
-} */
+.status-output{
+    margin-top: 2%;   
+    margin-left: 5%;
+}
 
 .mdl_btn{
     margin-left: 5%;
 }
 
 .status-label{
-    margin-left: 20%;
-    font-weight: 600;
+    text-align: left;
+    margin-left: 15%;
+    margin-top: 10%;
 }
 
 #myCanvas{

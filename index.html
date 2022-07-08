@@ -25,11 +25,15 @@
                 <h3>Data Properties</h3>
                 <label class="control-label" for="noRange">No. of points    :</label>
                 <label class="control-label-view range"></label>
-                <input type="range" id="noRange" class="form-range range" value="250" step="5" min="30" max="500" onload="updateLabel(this)" oninput="updateLabel(this)" onchange="udpateChart(this)">
+                <input type="range" id="noRange" class="form-range range" value="250" step="5" min="30" max="500" onload="updateLabel(this)" oninput="updateLabel(this)" onchange="updateChart(this)">
 
                 <label class="control-label" for="noise">Noise  :</label>
                 <label class="control-label-view noise"></label>
-                <input type="range" id="noise" class="form-range noise" value="0.5" step="0.5" min="0" max="20" onload="updateLabel(this)" oninput="updateLabel(this)" onchange="udpateChart(this)">
+                <input type="range" id="noise" class="form-range noise" value="0.5" step="0.5" min="0" max="20" onload="updateLabel(this)" oninput="updateLabel(this)" onchange="updateChart(this)">
+
+                <label class="control-label" for="roundFactor">Global Rounding Factor  :</label>
+                <label class="control-label-view roundFactor"></label>
+                <input type="range" id="roundFactor" class="form-range roundFactor" value="3" step="1" min="3" max="10" onload="updateLabel(this)" oninput="updateLabel(this)" onchange="updateGlobalRoundingFactor(this)">
                 <!-- <button type="button" class="btn btn-primary" onclick="load_chart()">Generate</button> -->
             </div>
             <div class="col-md-6 col-sm-12 col-lg-3 controls">
@@ -45,6 +49,10 @@
                 <label class="control-label" for="bRange">BatchSize  :</label>
                 <label class="control-label-view batch"></label>
                 <input type="range" id="bRange" class="form-range batch" step="32" min="32" max="256" value="32" onload="updateLabel(this)" oninput="updateLabel(this)">
+
+                <label class="control-label" for="pRange">Equation Order :</label>
+                <label class="control-label-view order"></label>
+                <input type="range" id="pRange" class="form-range order" step="1" min="1" max="10" value="1" onload="updateLabel(this)" oninput="updateLabel(this)">
             </div>
             <div class="col-md-12 col-sm-12 col-lg-6">
                 <canvas id="myCanvas"></canvas>
@@ -54,10 +62,16 @@
             <div class="col-lg-6 col-md-6 col-sm-12">
                 <button type="button" class="btn btn-primary mdl_btn" id="startButton" onclick="startModel(this)">Start</button>
                 <button type="button" class="btn btn-primary mdl_btn" id="stopButton" onclick="stopModel(this)" disabled>Stop</button>
+
+                <h3 class="status-label">
+                    Status
+                </h3>
+                <label class="status-output epoch"></label>    
                 <br>
+                <label class="status-output loss"></label>
                 <br>
-                <label class="status-label">Status : </label>
-                <label class="status-output"></label>
+                <label class="status-output weights"></label>
+                <br>
             </div>
             <div class="col-lg-6 col-md-6 col-sm-12">
                 <canvas id="paramChart"></canvas>

@@ -4,6 +4,7 @@ let global_selected_method = "regression";  // Globally selected method
 let global_data = undefined;    // Globally generated data
 let global_continue_flag= true; // Stop button flag
 let global_rounding_factor = 3; // Global rounding factor for all calculations
+let CLIP = [-10,10];
 
 // Test variables
 let obj = undefined;
@@ -65,7 +66,6 @@ function createRandomX(no_points){
             randx.push(round(min+step,global_rounding_factor));
             continue;
         }
-        // console.log(round(step+randx[i-1],global_rounding_factor));
         randx.push(round(step+randx[i-1],global_rounding_factor));
     }
     return randx;
@@ -89,7 +89,8 @@ function getModelProperties(){
     return {
         epochs : +document.getElementsByClassName("form-range epochs")[0].value,
         lr : +document.getElementsByClassName("form-range lr")[0].value,
-        batch_size : +document.getElementsByClassName("form-range batch")[0].value
+        batch_size : +document.getElementsByClassName("form-range batch")[0].value,
+        order : +document.getElementsByClassName("form-range order")[0].value
     }
 }
 
@@ -127,7 +128,15 @@ function sliceData(batch_size){
 function evaluate(x,weights){
     ans = [];
     x.forEach(ele => {
-        ans.push(round(ele*weights["m"] + weights["c"],global_rounding_factor));
+        let y = 0;
+        for(let i=weights.m.length;i>=0;i--){
+            if(i==0){
+                y += weights.c;
+                continue;
+            }
+            y += Math.pow(ele,i) * weights.m[weights.m.length-i];
+        }
+        ans.push(round(y,global_rounding_factor));
     })
     return ans;
 }
@@ -156,21 +165,51 @@ function average(lst){
     return round(s / lst.length,global_rounding_factor);
 }
 
-function grad(y_t,y_p,x_p){
+function clip(grad){
+    if(grad<CLIP[0]){
+        return CLIP[0];
+    }
+    if(grad>CLIP[1]){
+        return CLIP[1];
+    }
+    return grad;
+}
+
+function grad(y_t,y_p,x_p,ord){
     ans_m = [];
     ans_c = [];
+    ans_c_set = false;
     diff = difference(y_t,y_p);
-    x_p.forEach(x => {
-        ans_m.push(round(diff[x_p.indexOf(x)]*x,global_rounding_factor));
-        ans_c.push(round(diff[x_p.indexOf(x)],global_rounding_factor));
-    });
-    return [average(ans_m),average(ans_c)];
+    for(let i=ord;i>=1;i--){
+        gd = [];
+        x_p.forEach(ele=>{
+            gd.push(clip(round(diff[x_p.indexOf(ele)]*Math.pow(ele,i),global_rounding_factor)));
+            if(!ans_c_set){
+                ans_c.push(clip(round(diff[x_p.indexOf(ele)],global_rounding_factor)));
+                ans_c_set = true;
+            }
+        })
+        ans_m.push(gd);
+    }
+    avg_gd = []
+    ans_m.forEach(ele=>{
+        avg_gd.push(average(ele));
+    })
+    return [avg_gd,average(ans_c)];
 }
 
 function updatePredictionLine(weights){
     let gen = [];
     global_data[0].forEach(x => {
-        gen.push(round((x*weights["m"] + weights["c"]),global_rounding_factor));
+        y = 0;
+        for(let i=weights.m.length;i>=0;i--){
+            if(i==0){
+                y += weights.c;
+                continue;
+            }
+            y += weights.m[weights.m.length-i] * Math.pow(x,i);
+        }
+        gen.push(round(y,global_rounding_factor));
     });
     if(chart.data.datasets.length==1){
         chart.data.datasets.push({
@@ -203,6 +242,14 @@ function shuffle(x_arr,y_arr){
     }
 }
 
+function initWeights(order){
+    let w = []
+    for(let i=0;i<order;i++){
+        w.push(round(Math.random(),global_rounding_factor))
+    }
+    return w;
+}
+
 function runModel(modelProps){
     if(!modelProps){
         alert("Model properties not aquired !");
@@ -211,13 +258,16 @@ function runModel(modelProps){
     let data_batchwise = sliceData(modelProps["batch_size"]);
     let x_batchwise = data_batchwise[0];
     let y_batchwise = data_batchwise[1];
+    let ord = modelProps["order"];
 
     let weights = {
-        m : round(Math.random(),global_rounding_factor),
+        m : initWeights(ord),
         c : round(Math.random(),global_rounding_factor),
         update : function(new_m,new_c){
-            this.m = round(this.m-new_m,global_rounding_factor);
-            this.c = round(this.c-new_c,global_rounding_factor);
+            for(let i=0;i<this.m.length;i++){
+                this.m[i] = round(this.m[i] + new_m[i],global_rounding_factor)
+            }
+            this.c = round(this.c+new_c,global_rounding_factor);
         }
     }
     all_loss = [];
@@ -231,27 +281,35 @@ function runModel(modelProps){
             for(let j=0;j<x_batchwise.length;j++){
                 y_pred = evaluate(x_batchwise[j],weights);
                 lss = loss(y_pred,y_batchwise[j]);
-                grd = grad(y_batchwise[j],y_pred,x_batchwise[j]);
-                weights.update(round(grd[0]*(-1)*modelProps["lr"],global_rounding_factor),round(grd[1]*(-1)*modelProps["lr"],global_rounding_factor));
+                grd = grad(y_batchwise[j],y_pred,x_batchwise[j],ord);
+                grd[0].forEach(ele=>{
+                    grd[0][grd[0].indexOf(ele)] = round(ele*(modelProps["lr"]),global_rounding_factor);
+                });
+                weights.update(grd[0],round(grd[1]*modelProps["lr"],global_rounding_factor));
                 epoch_lss.push(average(lss));
             }
         }else{
             stopModel(document.getElementById("stopButton"));
         }
-        document.getElementsByClassName("status-output")[0].innerText = `Epoch : ${i+1} Loss : ${average(epoch_lss)} Weights  : ${weights["m"]},${weights["c"]}`;
+        populateResult([i+1,average(epoch_lss),weights],["Epoch","Loss","Weights"]);
         all_loss.push(average(epoch_lss));
-        // updateParamChart(all_loss);
         updatePredictionLine(weights);
         console.log(`Epoch : ${i}   Loss : ${average(epoch_lss)}`);
     }
     updateParamChart(all_loss);
 }
 
+function populateResult(props,prop_names){
+    let eles = document.getElementsByClassName("status-output");
+    eles[0].innerText = `Epoch : ${props[0]}`;
+    eles[1].innerText = `Loss : ${props[1]}`;
+    eles[2].innerText = `Weigths : ${props[2].m} , ${props[2].c}`;
+}
+
 // Events and clicks
 
 //Test method to check the random generation
 function load_chart(options){
-    // console.log("Loading....")
     if(!global_selected_method){
         alert("global_selected_method undefined !");
         return;
@@ -282,12 +340,10 @@ function load_chart(options){
 }
 
 function updateParamChart(newParams){
-    // console.log(newParams);
     paramChart.data = {
         labels : range(newParams.length),
         datasets : [
             {
-                // type : "line",
                 label : "Loss",
                 data : newParams,
                 backgroundColor : "red",
@@ -311,7 +367,7 @@ function selectModel(object){
         }
     })
     document.getElementsByClassName("status-output")[0].innerText = "";
-    udpateChart();
+    updateChart();
 }
 
 //Runned when properties label is updated
@@ -319,18 +375,21 @@ function updateLabel(object){
     if(!object){
         let objs = Array.from(document.getElementsByClassName("form-range"));
         objs.forEach(x => {
-            // console.log(document.getElementsByClassName("control-label-view "+x.classList[1]));
             document.getElementsByClassName("control-label-view "+x.classList[1])[0].innerText = x.value;
         });
         return;
     }
     let property = object.classList[1];
-    // console.log(object.value);
     document.getElementsByClassName("control-label-view "+property)[0].innerText = object.value;
 }
 
-//update chart on change of range
-function udpateChart(object){
+// Update Global Rounding Factor
+function updateGlobalRoundingFactor(object){
+    global_rounding_factor = +object.value;
+}
+
+//Update chart on change of range
+function updateChart(object){
     let noise;
     let no_points;
 
@@ -359,7 +418,6 @@ function startModel(object){
 
     model_props = getModelProperties();
     alterModelPropertyInput(true);
-    // console.log("True.....");
     runModel(model_props);
 
     object.disabled = false;
