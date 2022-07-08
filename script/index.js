@@ -242,6 +242,7 @@ function shuffle(x_arr,y_arr){
     }
 }
 
+<<<<<<< HEAD
 function initWeights(order){
     let w = []
     for(let i=0;i<order;i++){
@@ -250,6 +251,8 @@ function initWeights(order){
     return w;
 }
 
+=======
+>>>>>>> 11a6af8ec591a0dc1b5717c24dabd462b8382259
 function runModel(modelProps){
     if(!modelProps){
         alert("Model properties not aquired !");
@@ -340,6 +343,10 @@ function load_chart(options){
 }
 
 function updateParamChart(newParams){
+<<<<<<< HEAD
+=======
+    // console.log(newParams);
+>>>>>>> 11a6af8ec591a0dc1b5717c24dabd462b8382259
     paramChart.data = {
         labels : range(newParams.length),
         datasets : [
