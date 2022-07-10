@@ -29,7 +29,7 @@
 
                 <label class="control-label" for="noise">Noise  :</label>
                 <label class="control-label-view noise"></label>
-                <input type="range" id="noise" class="form-range noise" value="0.5" step="0.5" min="0" max="20" onload="updateLabel(this)" oninput="updateLabel(this)" onchange="updateChart(this)">
+                <input type="range" id="noise" class="form-range noise" value="1.5" step="0.5" min="0" max="20" onload="updateLabel(this)" oninput="updateLabel(this)" onchange="updateChart(this)">
 
                 <label class="control-label" for="roundFactor">Global Rounding Factor  :</label>
                 <label class="control-label-view roundFactor"></label>
@@ -44,7 +44,7 @@
 
                 <label class="control-label" for="lrRange">Learning Rate  :</label>
                 <label class="control-label-view lr"></label>
-                <input type="range" id="lrRange" class="form-range lr" step="0.002" min="0.001" max="1" value="0.001" onload="updateLabel(this)" oninput="updateLabel(this)">
+                <input type="range" id="lrRange" class="form-range lr" step="0.002" min="0.001" max="1" value="0.005" onload="updateLabel(this)" oninput="updateLabel(this)">
 
                 <label class="control-label" for="bRange">BatchSize  :</label>
                 <label class="control-label-view batch"></label>
@@ -52,7 +52,7 @@
 
                 <label class="control-label" for="pRange">Equation Order :</label>
                 <label class="control-label-view order"></label>
-                <input type="range" id="pRange" class="form-range order" step="1" min="1" max="10" value="1" onload="updateLabel(this)" oninput="updateLabel(this)">
+                <input type="range" id="oRange" class="form-range order" step="1" min="1" max="10" value="1" onload="updateLabel(this)" oninput="updateLabel(this)">
             </div>
             <div class="col-md-12 col-sm-12 col-lg-6">
                 <canvas id="myCanvas"></canvas>
@@ -62,6 +62,8 @@
             <div class="col-lg-6 col-md-6 col-sm-12">
                 <button type="button" class="btn btn-primary mdl_btn" id="startButton" onclick="startModel(this)">Start</button>
                 <button type="button" class="btn btn-primary mdl_btn" id="stopButton" onclick="stopModel(this)" disabled>Stop</button>
+                <input type="file" accept=".csv" id="uploadInput" style="display: none;">
+                <button type="button" class="btn btn-primary mdl_btn" id="uploadButton" onclick="uploadCSV(this)">Upload CSV</button>
 
                 <h3 class="status-label">
                     Status

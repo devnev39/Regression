@@ -6,8 +6,17 @@ let global_continue_flag= true; // Stop button flag
 let global_rounding_factor = 3; // Global rounding factor for all calculations
 let CLIP = [-10,10];
 
-// Test variables
-let obj = undefined;
+document.getElementById("uploadInput").onchange = function(e){
+    if(e.target.files.length == 0){
+        alert("No file selected !");
+        return;
+    }
+    let reader = new FileReader();
+    reader.readAsText(e.target.files[0]);
+    reader.onload = function(out){
+        processCSVText(out.target.result);
+    };
+}
 
 let chart = new Chart(canvas,{
     type : "scatter",
@@ -61,12 +70,19 @@ function createRandomX(no_points){
     max = Math.round(Math.random()*10);;
     let step = (max-min) / no_points;
     let randx = [];
+    let ord = +document.getElementById("oRange").value;
     for(let i=0;i<no_points;i++){
+        let x = 0;
         if(!randx.length){
-            randx.push(round(min+step,global_rounding_factor));
-            continue;
+            x = round(min+step,global_rounding_factor);
+        }else{
+            x = round(step+randx[i-1][0],global_rounding_factor);
         }
-        randx.push(round(step+randx[i-1],global_rounding_factor));
+        let x_pow = [];
+        for(let i=1;i<=ord;i++){
+            x_pow.push(Math.pow(x,i));
+        }
+        randx.push(x_pow);
     }
     return randx;
 }
@@ -79,7 +95,7 @@ function createRegression(no_points,noise){
     ang *= Math.round(Math.random()) ? 1 : -1;
     let randy = [];
     randx.forEach(x => {
-        randy.push(round(Math.tan(ang)*x + noise + round(Math.random()*noise,global_rounding_factor),global_rounding_factor));
+        randy.push(round(Math.tan(ang)*x[0] + noise + round(Math.random()*noise,global_rounding_factor),global_rounding_factor));
     });
     global_data = [randx,randy];
     return [randx,randy];
@@ -129,12 +145,12 @@ function evaluate(x,weights){
     ans = [];
     x.forEach(ele => {
         let y = 0;
-        for(let i=weights.m.length;i>=0;i--){
-            if(i==0){
+        for(let i=0;i<=weights.m.length;i++){
+            if(i==weights.m.length){
                 y += weights.c;
                 continue;
             }
-            y += Math.pow(ele,i) * weights.m[weights.m.length-i];
+            y += ele[i] * weights.m[i];
         }
         ans.push(round(y,global_rounding_factor));
     })
@@ -175,39 +191,39 @@ function clip(grad){
     return grad;
 }
 
-function grad(y_t,y_p,x_p,ord){
+function grad(y_t,y_p,x_p){
     ans_m = [];
     ans_c = [];
     ans_c_set = false;
     diff = difference(y_t,y_p);
-    for(let i=ord;i>=1;i--){
-        gd = [];
-        x_p.forEach(ele=>{
-            gd.push(clip(round(diff[x_p.indexOf(ele)]*Math.pow(ele,i),global_rounding_factor)));
-            if(!ans_c_set){
-                ans_c.push(clip(round(diff[x_p.indexOf(ele)],global_rounding_factor)));
-                ans_c_set = true;
+    for(let i=0;i<=x_p[0].length;i++){
+        let dx_param = [];
+        x_p.forEach(x => {
+            if(i==x_p[0].length){
+                dx_param.push(clip(round(diff[x_p.indexOf(x)],global_rounding_factor)));
+            }else{
+                dx_param.push(clip(round(diff[x_p.indexOf(x)]*x[i],global_rounding_factor)));
             }
-        })
-        ans_m.push(gd);
+        });
+        if(i!=x_p[0].length){
+            ans_m.push(average(dx_param));
+            continue;
+        }
+        ans_c.push(average(dx_param));
     }
-    avg_gd = []
-    ans_m.forEach(ele=>{
-        avg_gd.push(average(ele));
-    })
-    return [avg_gd,average(ans_c)];
+    return [ans_m,ans_c];
 }
 
 function updatePredictionLine(weights){
     let gen = [];
     global_data[0].forEach(x => {
         y = 0;
-        for(let i=weights.m.length;i>=0;i--){
-            if(i==0){
+        for(let i=0;i<=weights.m.length;i++){
+            if(i==weights.m.length){
                 y += weights.c;
                 continue;
             }
-            y += weights.m[weights.m.length-i] * Math.pow(x,i);
+            y += weights.m[i] * x[i];
         }
         gen.push(round(y,global_rounding_factor));
     });
@@ -281,7 +297,7 @@ function runModel(modelProps){
             for(let j=0;j<x_batchwise.length;j++){
                 y_pred = evaluate(x_batchwise[j],weights);
                 lss = loss(y_pred,y_batchwise[j]);
-                grd = grad(y_batchwise[j],y_pred,x_batchwise[j],ord);
+                grd = grad(y_batchwise[j],y_pred,x_batchwise[j]);
                 grd[0].forEach(ele=>{
                     grd[0][grd[0].indexOf(ele)] = round(ele*(modelProps["lr"]),global_rounding_factor);
                 });
@@ -308,6 +324,14 @@ function populateResult(props,prop_names){
 
 // Events and clicks
 
+function uploadCSV(obj){
+    document.getElementById("uploadInput").click();
+}
+
+function processCSVText(data){
+    console.log(data);
+}
+
 //Test method to check the random generation
 function load_chart(options){
     if(!global_selected_method){
@@ -327,7 +351,7 @@ function load_chart(options){
         return;
     }
     chart.data = {
-        labels : data[0],
+        labels : selectParamColumn(data[0],0),
         datasets : [
             {
                 label : "Regression Points",
@@ -337,6 +361,14 @@ function load_chart(options){
         ],
     }
     chart.update();
+}
+
+function selectParamColumn(data,column_index){
+    let param_data = [];
+    data.forEach(ele => {
+        param_data.push(ele[column_index]);
+    });
+    return param_data;
 }
 
 function updateParamChart(newParams){
@@ -381,6 +413,24 @@ function updateLabel(object){
     }
     let property = object.classList[1];
     document.getElementsByClassName("control-label-view "+property)[0].innerText = object.value;
+    if(object.classList[1] == "order"){
+        updateGlobalDataOrder(+object.value);
+    }
+}
+
+function updateGlobalDataOrder(order){
+    global_data[0].forEach(x => {
+        if(x.length > order){
+            while(x.length!=order){
+                x.splice(-1);
+            }
+        }
+        if(x.length < order){
+            for(let i=x.length+1;i<=order;i++){
+                x.push(Math.pow(x[0],i));
+            }
+        }
+    });
 }
 
 // Update Global Rounding Factor
