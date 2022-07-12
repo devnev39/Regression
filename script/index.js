@@ -5,9 +5,11 @@ let global_data = undefined;    // Globally generated data
 let global_raw_data = undefined;
 let global_continue_flag= true; // Stop button flag
 let global_rounding_factor = 3; // Global rounding factor for all calculations
+let data_uploaded = false;
 let CLIP = [-10,10];
 let global_param_index = 0;
 let global_last_weights = undefined;
+let upload_data_selected_params = [];
 
 let funcBinder = {
     alg : function(inp){
@@ -138,11 +140,20 @@ function createRegression(no_points,noise){
 }
 
 function getModelProperties(){
+    let ord = undefined;
+    if(data_uploaded){
+        ord = getSelectedParamCount();
+        if(ord==0){
+            return;
+        }
+    }else{
+        ord = +document.getElementById("ordSelect").value;
+    }
     return {
         epochs : +document.getElementsByClassName("form-range epochs")[0].value,
         lr : +document.getElementsByClassName("form-range lr")[0].value,
         batch_size : +document.getElementsByClassName("form-range batch")[0].value,
-        order : +document.getElementById("ordSelect").value
+        order : ord
     }
 }
 
@@ -386,7 +397,6 @@ function uploadCSV(obj){
 
 function processCSVText(data){
     let split = data.split("\n");
-    // console.log(split[0][2]);
     if(data.length == 0){
         alert("Empty file !");
         return;
@@ -403,6 +413,13 @@ function processCSVText(data){
     split.forEach(ele => {
         split[split.indexOf(ele)] = ele.split(",");
     });
+    split.forEach(ele => {
+        ele.forEach(sub_ele => {
+            if(sub_ele.indexOf("\r")){
+                ele[ele.indexOf(sub_ele)] = sub_ele.replace("\r","");
+            }
+        });
+    });
     for(let val of split[0]){
         params += val+" ";
     }
@@ -412,14 +429,12 @@ function processCSVText(data){
 function setGlobalData(data){
     let params = data.splice(0,1)[0];
     let nans = [];
-    console.log(params);
     for(let i=0;i<params.length;i++){
         let trial = data[0][i];
         trial = +trial;
         if(isNaN(trial)){
             nans.push(params[i]);
         }
-        console.log(trial);
     }
 
     data.forEach(ele => {
@@ -444,18 +459,20 @@ function setGlobalData(data){
 
     alert("Enter the target column from given : "+params);
     let res = prompt("Target : ");
-    console.log(res);
 
     let target_ind = 0;
-    for(let i=0;i<data[0].length;i++){
+    for(let i=0;i<=data[0].length;i++){
         if(params[i] == res){
             target_ind = i;
+            break;
+        }
+        if(i == data[0].length){
+            alert("Target param not found !");
+            return;
         }
     }
-    console.log(params);
+
     let target = params.splice(target_ind,1);
-    console.log(params);
-    console.log(target);
     let x_vals = [];
     let y_vals = [];
     
@@ -474,6 +491,11 @@ function setGlobalData(data){
         if(ele.length==0){
             x_vals.splice(x_vals.indexOf(ele),1);
         }
+        if(x_vals.indexOf(ele) >= 1){
+            if(ele.length < x_vals[x_vals.indexOf(ele)-1].length){
+                x_vals.splice(x_vals.indexOf(ele),1);
+            }
+        }
     });
     y_vals.forEach(ele => {
         if(ele == undefined){
@@ -485,13 +507,39 @@ function setGlobalData(data){
         return;
     }
     global_data = [x_vals,y_vals];
+    global_raw_data = JSON.parse(JSON.stringify(global_data));
+    data_uploaded = true;
+    document.getElementById("uploadFileLabel").innerText = `Columns : ${x_vals[0].length+1}  Rows : ${x_vals.length}`
     updateDataModelControls(params,target);
 }
 
 function updateDataModelControls(x_params,y_target){
-    document.getElementById("oRange").disabled = true;
     document.getElementById("noRange").disabled = true;
     document.getElementById("noise").disabled = true;
+
+    let div = document.getElementById("dataControlDiv");
+
+    while(div.firstChild){
+        div.removeChild(div.firstChild);
+    }
+
+    for(let param of x_params){
+        let row = document.createElement("tr");
+        let col1 = document.createElement("td");
+        let col2 = document.createElement("td");
+        let radio = document.createElement("input");
+        let label = document.createElement("label");
+        col2.setAttribute("style","padding-left : 20%;");
+        radio.setAttribute("type","checkbox");
+        radio.setAttribute("onchange","paramSelectionStateChanged(this)");
+        label.innerText = param;
+        col1.appendChild(label);
+        col2.appendChild(radio);
+        row.appendChild(col1);
+        row.appendChild(col2);
+        div.appendChild(row);
+        // div.appendChild(document.createElement("br"));
+    }
 
     updateParamSelector({
         x_param : x_params,
@@ -499,6 +547,43 @@ function updateDataModelControls(x_params,y_target){
     });
 
     load_chart(undefined);
+}
+
+function getSelectedParamCount(){
+    let dataDiv = document.getElementById("dataControlDiv");
+    let count = 0;
+    let arr = Array.from(dataDiv.children);
+    for(let row of arr){
+        if(row.children[1].children[0].checked){
+            count += 1;
+            upload_data_selected_params.push(arr.indexOf(row));
+        }
+    }
+    if(count == 0){
+        alert("No param selected !\nSelect atleast one param to proceed !");
+        return count;
+    }
+    trimGlobalData();
+    return count;
+}
+
+function trimGlobalData(){
+    global_raw_data.forEach(ele => {
+        let tempLst = [];
+        for(let ind of upload_data_selected_params){
+            for(let i=0;i<ele.length;i++){
+                if(ind==i){
+                    tempLst.push(ele[ind]);
+                    break;
+                }
+            }
+        }
+        global_data[0][global_raw_data[0].indexOf(ele)] = tempLst;
+    });
+}
+
+function paramSelectionStateChanged(obj){
+    
 }
 
 //Test method to check the random generation
@@ -670,7 +755,13 @@ function startModel(object){
     object.disabled = true;
     document.getElementById("stopButton").disabled = false;
 
-    model_props = getModelProperties();
+    let model_props = getModelProperties();
+    if(model_props==undefined){
+        object.disabled = false;
+        document.getElementById("stopButton").disabled = true;
+        alterModelPropertyInput();
+        return;
+    }
     alterModelPropertyInput(true);
     runModel(model_props);
 

@@ -59,25 +59,24 @@
                 <label class="control-label" for="bRange">BatchSize  :</label>
                 <label class="control-label-view batch"></label>
                 <input type="range" id="bRange" class="form-range batch" step="32" min="32" max="256" value="32" onload="updateLabel(this)" oninput="updateLabel(this)">
-<!-- 
-                <label class="control-label" for="pRange">Equation Order :</label>
-                <label class="control-label-view order"></label>
-                <input type="range" id="oRange" class="form-range order" step="1" min="1" max="10" value="1" onload="updateLabel(this)" oninput="updateLabel(this)"> -->
-                <label class="control-label">Function : </label>
-                <select id="funcSelect" style="margin-right: 5%;" onchange="updateGlobalDataOrder(document.getElementById('ordSelect'))">
-                    <option value="alg">W.X + c</option>
-                    <option value="sin">sin^n(x)</option>
-                    <option value="cos">cos^n(x)</option>
-                    <option value="sincos">sin^n(x) + cos^n(x)</option>
-                </select>
-                <label class="control-label">Order : </label>
-                <select id="ordSelect" onchange="updateGlobalDataOrder(this)">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                </select>
+
+                <div id="dataControlDiv">
+                    <label class="control-label">Function : </label>
+                    <select id="funcSelect" style="margin-right: 5%;" onchange="updateGlobalDataOrder(document.getElementById('ordSelect'))">
+                        <option value="alg">W.X + c</option>
+                        <option value="sin">sin^n(x)</option>
+                        <option value="cos">cos^n(x)</option>
+                        <option value="sincos">sin^n(x) + cos^n(x)</option>
+                    </select>
+                    <label class="control-label">Order : </label>
+                    <select id="ordSelect" onchange="updateGlobalDataOrder(this)">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                    </select>
+                </div>
             </div>
             <div class="col-md-12 col-sm-12 col-lg-6">
                 <canvas id="myCanvas"></canvas>
@@ -89,6 +88,7 @@
                 <button type="button" class="btn btn-primary mdl_btn" id="stopButton" onclick="stopModel(this)" disabled>Stop</button>
                 <input type="file" accept=".csv" id="uploadInput" style="display: none;">
                 <button type="button" class="btn btn-primary mdl_btn" id="uploadButton" onclick="uploadCSV(this)">Upload CSV</button>
+                <label id="uploadFileLabel" style="margin-left: 5%;"></label>
 
                 <h3 class="status-label">
                     Status
