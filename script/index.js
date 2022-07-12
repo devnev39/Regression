@@ -2,9 +2,43 @@ let canvas = document.getElementById("myCanvas");
 let paramCanvas = document.getElementById("paramChart");
 let global_selected_method = "regression";  // Globally selected method
 let global_data = undefined;    // Globally generated data
+let global_raw_data = undefined;
 let global_continue_flag= true; // Stop button flag
 let global_rounding_factor = 3; // Global rounding factor for all calculations
 let CLIP = [-10,10];
+let global_param_index = 0;
+let global_last_weights = undefined;
+
+let funcBinder = {
+    alg : function(inp){
+        let lst = [];
+        for(let i=1;i<=inp["ord"];i++){
+            lst.push(round(Math.pow(inp["nx"][0],i),global_rounding_factor));
+        }
+        return lst;
+    },
+    sin : function(inp){
+        let lst = [];
+        for(let i=1;i<=inp["ord"];i++){
+            lst.push(round(Math.pow(Math.sin(inp["nx"][0]),i),global_rounding_factor));
+        }
+        return lst;
+    },
+    cos : function(inp){
+        let lst = [];
+        for(let i=1;i<=inp["ord"];i++){
+            lst.push(round(Math.pow(Math.cos(inp["nx"][0]),i),global_rounding_factor));
+        }
+        return lst;
+    },
+    sincos : function(inp){
+        let lst = [];
+        for(let i=1;i<=inp["ord"];i++){
+            lst.push(round(Math.pow(Math.sin(inp["nx"][0]),i)+Math.pow(Math.cos(inp["nx"][0]),i),global_rounding_factor));
+        }
+        return lst;
+    }
+}
 
 document.getElementById("uploadInput").onchange = function(e){
     if(e.target.files.length == 0){
@@ -50,6 +84,7 @@ let paramChart = new Chart(paramCanvas,{
 // Select defaults for loading site
 selectModel(document.getElementsByClassName("regression")[0]);
 updateLabel(undefined);
+updateParamSelector(1);
 
 //Methods and function
 
@@ -70,7 +105,7 @@ function createRandomX(no_points){
     max = Math.round(Math.random()*10);;
     let step = (max-min) / no_points;
     let randx = [];
-    let ord = +document.getElementById("oRange").value;
+    let ord = +document.getElementById("ordSelect").value;
     for(let i=0;i<no_points;i++){
         let x = 0;
         if(!randx.length){
@@ -98,6 +133,7 @@ function createRegression(no_points,noise){
         randy.push(round(Math.tan(ang)*x[0] + noise + round(Math.random()*noise,global_rounding_factor),global_rounding_factor));
     });
     global_data = [randx,randy];
+    global_raw_data = JSON.parse(JSON.stringify([randx,randy]));
     return [randx,randy];
 }
 
@@ -106,7 +142,7 @@ function getModelProperties(){
         epochs : +document.getElementsByClassName("form-range epochs")[0].value,
         lr : +document.getElementsByClassName("form-range lr")[0].value,
         batch_size : +document.getElementsByClassName("form-range batch")[0].value,
-        order : +document.getElementsByClassName("form-range order")[0].value
+        order : +document.getElementById("ordSelect").value
     }
 }
 
@@ -122,7 +158,7 @@ function sliceData(batch_size){
     }
     batchwise_data = []
     for(dataset of global_data){
-        data = []
+        data = [];
         count = 1;
         batch_data = [];
         for(point of dataset){
@@ -309,6 +345,7 @@ function runModel(modelProps){
         }
         populateResult([i+1,average(epoch_lss),weights],["Epoch","Loss","Weights"]);
         all_loss.push(average(epoch_lss));
+        global_last_weights = weights;
         updatePredictionLine(weights);
         console.log(`Epoch : ${i}   Loss : ${average(epoch_lss)}`);
     }
@@ -324,34 +361,176 @@ function populateResult(props,prop_names){
 
 // Events and clicks
 
+function selectionChanged(obj){
+    if(obj.id == "targetSelect"){
+        return;
+    }
+    for(let i=0;i<obj.childElementCount;i++){
+        if(obj.children[i].value == obj.value){
+            if(i > global_data[0][0].length-1){
+                global_param_index = -1;
+                continue;
+            }
+            global_param_index = i;
+        }
+    }
+    load_chart(undefined);
+    if(global_last_weights){
+        updatePredictionLine(global_last_weights);
+    }
+}
+
 function uploadCSV(obj){
     document.getElementById("uploadInput").click();
 }
 
 function processCSVText(data){
-    console.log(data);
+    let split = data.split("\n");
+    // console.log(split[0][2]);
+    if(data.length == 0){
+        alert("Empty file !");
+        return;
+    }
+    if(split.length == 0 || split.length < 2){
+        alert("Less data !");
+        return;
+    }
+    if(split[0].length<2){
+        alert("No parameter received (Only one data column)!");
+        return;
+    }
+    let params = "";
+    split.forEach(ele => {
+        split[split.indexOf(ele)] = ele.split(",");
+    });
+    for(let val of split[0]){
+        params += val+" ";
+    }
+    setGlobalData(split);
+}
+
+function setGlobalData(data){
+    let params = data.splice(0,1)[0];
+    let nans = [];
+    console.log(params);
+    for(let i=0;i<params.length;i++){
+        let trial = data[0][i];
+        trial = +trial;
+        if(isNaN(trial)){
+            nans.push(params[i]);
+        }
+        console.log(trial);
+    }
+
+    data.forEach(ele => {
+        let newEle = [];
+        for(let i=0;i<ele.length;i++){
+            let isnan = false;
+            for(let nan of nans){
+                if(i == params.indexOf(nan)){
+                    isnan = true;
+                }
+            }
+            if(!isnan){
+                newEle.push(ele[i]);
+            }
+        }
+        data[data.indexOf(ele)] = newEle;
+    });
+
+    for(let nan of nans){
+        params.splice(params.indexOf(nan),1);
+    }
+
+    alert("Enter the target column from given : "+params);
+    let res = prompt("Target : ");
+    console.log(res);
+
+    let target_ind = 0;
+    for(let i=0;i<data[0].length;i++){
+        if(params[i] == res){
+            target_ind = i;
+        }
+    }
+    console.log(params);
+    let target = params.splice(target_ind,1);
+    console.log(params);
+    console.log(target);
+    let x_vals = [];
+    let y_vals = [];
+    
+    data.forEach(ele => {
+        let ele_lst = [];
+        for(let i=0;i<ele.length;i++){
+            if(i!=target_ind){
+                ele_lst.push(+ele[i]);
+                continue;
+            }
+            y_vals.push(+ele[i]);
+        }
+        x_vals.push(ele_lst);
+    });
+    x_vals.forEach(ele => {
+        if(ele.length==0){
+            x_vals.splice(x_vals.indexOf(ele),1);
+        }
+    });
+    y_vals.forEach(ele => {
+        if(ele == undefined){
+            y_vals.splice(y_vals.indexOf(ele),1);
+        }
+    });
+    if(x_vals.length != y_vals.length){
+        alert("Assertion error in lengths of params and targets !");
+        return;
+    }
+    global_data = [x_vals,y_vals];
+    updateDataModelControls(params,target);
+}
+
+function updateDataModelControls(x_params,y_target){
+    document.getElementById("oRange").disabled = true;
+    document.getElementById("noRange").disabled = true;
+    document.getElementById("noise").disabled = true;
+
+    updateParamSelector({
+        x_param : x_params,
+        y_target : y_target
+    });
+
+    load_chart(undefined);
 }
 
 //Test method to check the random generation
 function load_chart(options){
-    if(!global_selected_method){
-        alert("global_selected_method undefined !");
-        return;
-    }
     let data = undefined;
-    if(global_selected_method=="regression"){
-        if(!options){
-            data = createRegression(100,4.5);
+    if(options){
+        if(!global_selected_method){
+            alert("global_selected_method undefined !");
+            return;
+        }
+        data = undefined;
+        if(global_selected_method=="regression"){
+            if(!options){
+                data = createRegression(100,4.5);
+            }else{
+                data = createRegression(options["no_points"],options["noise"]);
+            }
+        }
+        if(!data){
+            alert("data is undefined !");
+            return;
+        }
+    }else{
+        if(global_param_index==-1){
+            data = global_raw_data;  
+            global_param_index = 0;
         }else{
-            data = createRegression(options["no_points"],options["noise"]);
+            data = global_data;
         }
     }
-    if(!data){
-        alert("data is undefined !");
-        return;
-    }
     chart.data = {
-        labels : selectParamColumn(data[0],0),
+        labels : selectParamColumn(data[0],global_param_index),
         datasets : [
             {
                 label : "Regression Points",
@@ -413,24 +592,49 @@ function updateLabel(object){
     }
     let property = object.classList[1];
     document.getElementsByClassName("control-label-view "+property)[0].innerText = object.value;
-    if(object.classList[1] == "order"){
-        updateGlobalDataOrder(+object.value);
-    }
 }
 
-function updateGlobalDataOrder(order){
-    global_data[0].forEach(x => {
-        if(x.length > order){
-            while(x.length!=order){
-                x.splice(-1);
-            }
-        }
-        if(x.length < order){
-            for(let i=x.length+1;i<=order;i++){
-                x.push(Math.pow(x[0],i));
-            }
-        }
+function updateGlobalDataOrder(obj){
+    let order = +obj.value;
+    global_raw_data[0].forEach(x => {
+        global_data[0][global_raw_data[0].indexOf(x)] = funcBinder[document.getElementById("funcSelect").value]({ord : order, nx : x});
     });
+    updateParamSelector(order);
+    load_chart(undefined);
+}
+
+function createOption(value,innerText,theParent){
+    let opt = document.createElement("option");
+    opt.value = value;
+    opt.innerText = innerText;
+    theParent.appendChild(opt);
+}
+
+function updateParamSelector(order){
+    let paramSelector = document.getElementById("paramSelect");
+    let targetSelector = document.getElementById("targetSelect");
+
+    while(paramSelector.firstChild){
+        paramSelector.removeChild(paramSelector.firstChild);
+    }
+    if(Object.keys(order).length){
+        for(let i=0;i<order["x_param"].length;i++){
+            createOption(order["x_param"][i],order["x_param"][i],paramSelector);
+        }
+    }else{
+        for(let i=1;i<=order;i++){
+            createOption("x^"+i,"x^"+i,paramSelector);
+        }
+        if(document.getElementById("funcSelect").value != "alg"){
+            createOption("x","x",paramSelector);
+        }
+    }
+    targetSelector.removeChild(targetSelector.firstChild);
+    if(Object.keys(order).length){
+        createOption(order["y_target"],order["y_target"],targetSelector);
+    }else{
+        createOption("y","y",targetSelector);
+    }
 }
 
 // Update Global Rounding Factor
